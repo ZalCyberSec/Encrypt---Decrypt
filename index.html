@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encode & Decode Script</title>
+<style>
+    :root {
+        --dark-blue: #0D1B2A;
+        --purple: #5E2B97;
+        --black: #0A0A0A;
+        --white: #F1F1F1;
+    }
+    body {
+        font-family: Arial, sans-serif;
+        background: var(--dark-blue);
+        color: var(--white);
+        margin: 0;
+        padding: 0;
+    }
+    header {
+        text-align: center;
+        padding: 15px;
+        font-size: 1.6rem;
+        font-weight: bold;
+        background: linear-gradient(90deg, var(--purple), var(--dark-blue));
+        box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+    main {
+        max-width: 900px;
+        margin: 25px auto;
+        background: var(--black);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 0 25px rgba(255,255,255,0.1);
+    }
+    label {
+        display: block;
+        margin-top: 12px;
+        font-weight: bold;
+    }
+    textarea {
+        width: 100%;
+        height: 140px;
+        padding: 10px;
+        border-radius: 8px;
+        border: none;
+        resize: vertical;
+        background: var(--dark-blue);
+        color: var(--white);
+        font-size: 14px;
+    }
+    select, button, input[type="file"] {
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    select {
+        background: var(--purple);
+        color: var(--white);
+        width: 100%;
+        margin-top: 5px;
+    }
+    .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    button {
+        flex: 1;
+        min-width: 130px;
+        background: var(--purple);
+        color: var(--white);
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    button:hover {
+        background: #7D3C98;
+    }
+    input[type="file"] {
+        background: var(--dark-blue);
+        color: var(--white);
+        width: 100%;
+    }
+</style>
+</head>
+<body>
+<header>The End Encrypt & Decrypt</header>
+<main>
+    <label for="fileInput">Upload File</label>
+    <input type="file" id="fileInput">
+
+    <label for="textInput">Teks</label>
+    <textarea id="textInput" placeholder="Tulis teks atau upload file..."></textarea>
+
+    <label for="typeSelect">Pilih Tipe</label>
+    <select id="typeSelect">
+        <option value="base64">Base64</option>
+        <option value="hex">Hex</option>
+        <option value="url">URL Encode</option>
+        <option value="rot13">ROT13</option>
+    </select>
+
+    <div class="btn-group">
+        <button onclick="encodeText()">Encrypt</button>
+        <button onclick="decodeText()">Decrypt</button>
+        <button onclick="copyResult()">Copy</button>
+        <button onclick="downloadResult()">Download</button>
+        <button onclick="resetAll()">Reset</button>
+    </div>
+
+    <label for="result">Hasil</label>
+    <textarea id="result" readonly></textarea>
+</main>
+
+<script>
+document.getElementById("fileInput").addEventListener("change", function(){
+    let file = this.files[0];
+    if(file){
+        let reader = new FileReader();
+        reader.onload = function(e){
+            document.getElementById("textInput").value = e.target.result;
+        }
+        reader.readAsText(file);
+    }
+});
+
+function encodeText(){
+    let text = document.getElementById("textInput").value;
+    let type = document.getElementById("typeSelect").value;
+    let result = "";
+
+    if(type === "base64"){
+        let encoded = btoa(unescape(encodeURIComponent(text)));
+        result = `eval(Buffer.from('${encoded}','base64').toString())`;
+    }
+    else if(type === "hex"){
+        result = Array.from(text).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+    }
+    else if(type === "url"){
+        result = encodeURIComponent(text);
+    }
+    else if(type === "rot13"){
+        result = text.replace(/[a-zA-Z]/g, c =>
+            String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26)
+        );
+    }
+
+    document.getElementById("result").value = result;
+}
+
+function decodeText(){
+    let text = document.getElementById("textInput").value;
+    let type = document.getElementById("typeSelect").value;
+    let result = "";
+
+    if(type === "base64"){
+        try {
+            let pure = text.replace(/^eval\(Buffer\.from\('(.*)','base64'\)\.toString\(\)\)$/, "$1");
+            result = decodeURIComponent(escape(atob(pure)));
+        } catch {
+            alert("Format Base64 salah!");
+            return;
+        }
+    }
+    else if(type === "hex"){
+        result = text.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+    }
+    else if(type === "url"){
+        result = decodeURIComponent(text);
+    }
+    else if(type === "rot13"){
+        result = text.replace(/[a-zA-Z]/g, c =>
+            String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26)
+        );
+    }
+
+    document.getElementById("result").value = result;
+}
+
+function copyResult(){
+    navigator.clipboard.writeText(document.getElementById("result").value)
+        .then(() => alert("✅ Hasil disalin!"))
+        .catch(() => alert("❌ Gagal menyalin!"));
+}
+
+function downloadResult(){
+    let text = document.getElementById("result").value;
+    let blob = new Blob([text], {type: "text/plain"});
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "hasil.txt";
+    link.click();
+}
+
+function resetAll(){
+    document.getElementById("textInput").value = "";
+    document.getElementById("result").value = "";
+    document.getElementById("fileInput").value = "";
+}
+</script>
+</body>
+</html>
